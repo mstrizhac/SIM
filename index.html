@@ -138,6 +138,32 @@
     }
 
     function d3Draw() {
+        const s = d3.select('#svg');
+        s.selectAll('*').remove();
+        const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border-tertiary') || '#ddd';
+        const axisColor = getComputedStyle(document.documentElement).getPropertyValue('--color-border-primary') || '#aaa';
+        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text-secondary') || '#888';
+        for (let x = PAD; x <= W - PAD; x += 40) s.append('line').attr('x1', x).attr('y1', PAD).attr('x2', x).attr('y2', H - PAD).attr('stroke', borderColor).attr('opacity', 0.5).attr('stroke-width', 0.5);
+        for (let y = PAD; y <= H - PAD; y += 40) s.append('line').attr('x1', PAD).attr('y1', y).attr('x2', W - PAD).attr('y2', y).attr('stroke', borderColor).attr('opacity', 0.5).attr('stroke-width', 0.5);
+        s.append('line').attr('x1', PAD).attr('y1', cy).attr('x2', W - PAD).attr('y2', cy).attr('stroke', axisColor).attr('stroke-width', 1);
+        s.append('line').attr('x1', cx).attr('y1', PAD).attr('x2', cx).attr('y2', H - PAD).attr('stroke', axisColor).attr('stroke-width', 1);
+        s.append('text').attr('x', W - PAD + 10).attr('y', cy + 4).attr('font-size', 10).attr('fill', textColor).attr('text-anchor', 'middle').text('x');
+        s.append('text').attr('x', cx - 4).attr('y', PAD - 6).attr('font-size', 10).attr('fill', textColor).attr('text-anchor', 'end').text('y');
+
+        const line = d3.line().x(d => toScreen(d.x, d.y)[0]).y(d => toScreen(d.x, d.y)[1]);
+        for (const { pts, color } of paths) {
+            s.append('path').datum(pts).attr('d', line).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1.5);
+            pts.filter((_, i) => i % 4 === 0).forEach(({ x, y }) => {
+                const [sx, sy] = toScreen(x, y);
+                s.append('circle').attr('cx', sx).attr('cy', sy).attr('r', 2.5).attr('fill', color);
+            });
+        }
+
+        for (let i = -4; i <= 4; i++) {
+            if (i === 0) continue;
+            s.append('text').attr('x', cx + i * 40).attr('y', cy + 12).attr('font-size', 10).attr('fill', textColor).attr('text-anchor', 'middle').text(Math.trunc(i * 40 / SCALE));
+            s.append('text').attr('x', cx - 4).attr('y', cy - i * 40 + 4).attr('font-size', 10).attr('fill', textColor).attr('text-anchor', 'end').text(Math.trunc(i * 40 / SCALE));
+        }
     }
 
     function redraw() { mode === 'canvas' ? canvasDraw() : d3Draw(); }
