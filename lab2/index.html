@@ -97,26 +97,39 @@
 
     const line = d3.line().x(d => xScale(d.x)).y(d => yScale(d.y)).curve(d3.curveCatmullRom);
 
-    function updateTrajectory() {
+    function updateTrajectory(animate) {
         const { pts, range, height, time } = computeTrajectory(getV0(), getAngle());
         updateStats(range, height, time);
 
         trajPath.datum(pts).attr('d', line);
 
-        trajPath.attr('stroke-dasharray', null).attr('stroke-dashoffset', null);
-        ball.attr('cx', xScale(pts[pts.length - 1].x)).attr('cy', yScale(pts[pts.length - 1].y));
+        if (animate) {
+            const totalLen = trajPath.node().getTotalLength();
+            trajPath
+                .attr('stroke-dasharray', totalLen)
+                .attr('stroke-dashoffset', totalLen)
+                .transition().duration(2000).ease(d3.easeLinear)
+                .attr('stroke-dashoffset', 0);
 
+            ball.attr('cx', xScale(0)).attr('cy', yScale(0))
+                .transition().duration(2000).ease(d3.easeLinear)
+                .attrTween('cx', () => t => xScale(pts[Math.min(Math.floor(t * pts.length), pts.length - 1)].x))
+                .attrTween('cy', () => t => yScale(pts[Math.min(Math.floor(t * pts.length), pts.length - 1)].y));
+        } else {
+            trajPath.attr('stroke-dasharray', null).attr('stroke-dashoffset', null);
+            ball.attr('cx', xScale(pts[pts.length - 1].x)).attr('cy', yScale(pts[pts.length - 1].y));
+        }
     }
 
-    updateTrajectory();
+    updateTrajectory(false);
 
     document.getElementById('v0').addEventListener('input', e => {
         document.getElementById('v0-val').textContent = e.target.value;
-        updateTrajectory();
+        updateTrajectory(false);
     });
     document.getElementById('angle').addEventListener('input', e => {
         document.getElementById('angle-val').textContent = e.target.value;
-        updateTrajectory();
+        updateTrajectory(false);
     });
     document.getElementById('btn-launch').addEventListener('click', () => updateTrajectory(true));
 </script>
