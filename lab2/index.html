@@ -1,0 +1,122 @@
+<meta charset="UTF-8">
+<style>
+    .container { padding: 1rem 0; font-family: var(--font-sans); }
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+    .ctrl { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 13px; color: var(--color-text-secondary); }
+    .val { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+    .stat { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+    .stat-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 2px; }
+    .stat-val { font-size: 18px; font-weight: 500; color: var(--color-text-primary); }
+    button { cursor: pointer; padding: 8px 20px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; color: var(--color-text-primary); font-size: 14px; }
+    button:hover { background: var(--color-background-secondary); }
+</style>
+
+<div class="container">
+    <div class="controls">
+        <div class="ctrl">
+            <label>Початкова швидкість: <span class="val" id="v0-val">30</span> м/с</label>
+            <input type="range" min="10" max="80" value="30" step="1" id="v0">
+        </div>
+        <div class="ctrl">
+            <label>Кут кидання: <span class="val" id="angle-val">45</span>°</label>
+            <input type="range" min="5" max="85" value="45" step="1" id="angle">
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><div class="stat-label">Дальність</div><div class="stat-val" id="s-range">—</div></div>
+        <div class="stat"><div class="stat-label">Макс. висота</div><div class="stat-val" id="s-height">—</div></div>
+        <div class="stat"><div class="stat-label">Час польоту</div><div class="stat-val" id="s-time">—</div></div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+        <button id="btn-launch">▶ Запустити</button>
+    </div>
+
+    <svg id="chart"></svg>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+    const g = 9.81;
+    const W = 680, H = 340, M = {top:20, right:20, bottom:40, left:55};
+    const iW = W - M.left - M.right, iH = H - M.top - M.bottom;
+
+    const MAX_V0 = 80;
+    const MAX_RANGE = (MAX_V0 * MAX_V0) / g;
+    const MAX_HEIGHT = (MAX_V0 * MAX_V0) / (2 * g);
+
+    const svg = d3.select('#chart')
+        .attr('viewBox', `0 0 ${W} ${H}`)
+        .style('width','100%').style('height','auto');
+
+    const chartG = svg.append('g').attr('transform', `translate(${M.left},${M.top})`);
+
+    const xScale = d3.scaleLinear().domain([0, MAX_RANGE]).range([0, iW]);
+    const yScale = d3.scaleLinear().domain([0, MAX_HEIGHT * 1.1]).range([iH, 0]);
+
+
+    const xAxis = chartG.append('g').attr('transform', `translate(0,${iH})`);
+    const yAxis = chartG.append('g');
+
+    function drawAxes() {
+        const ac = '#888';
+        xAxis.call(d3.axisBottom(xScale).ticks(7).tickFormat(d => d + ' м'))
+            .call(ag => { ag.selectAll('path,line').attr('stroke', ac); ag.selectAll('text').style('fill', ac).style('font-size','12px'); });
+        yAxis.call(d3.axisLeft(yScale).ticks(5).tickFormat(d => d + ' м'))
+            .call(ag => { ag.selectAll('path,line').attr('stroke', ac); ag.selectAll('text').style('fill', ac).style('font-size','12px'); });
+    }
+
+    drawAxes();
+
+    const trajPath = chartG.append('path').attr('fill','none').attr('stroke','#378ADD').attr('stroke-width', 2.5);
+    const ball = chartG.append('circle').attr('r', 8).attr('fill', '#D85A30').attr('cx', xScale(0)).attr('cy', yScale(0));
+
+    function computeTrajectory(v0, angleDeg) {
+        const a = angleDeg * Math.PI / 180;
+        const vx = v0 * Math.cos(a), vy = v0 * Math.sin(a);
+        const tTotal = 2 * vy / g;
+        const pts = [];
+        for (let i = 0; i <= 200; i++) {
+            const t = (i / 200) * tTotal;
+            pts.push({ x: vx * t, y: vy * t - 0.5 * g * t * t });
+        }
+        return { pts, range: vx * tTotal, height: (vy * vy) / (2 * g), time: tTotal };
+    }
+
+    function getV0() { return +document.getElementById('v0').value; }
+    function getAngle() { return +document.getElementById('angle').value; }
+
+    function updateStats(range, height, time) {
+        document.getElementById('s-range').textContent = range.toFixed(1) + ' м';
+        document.getElementById('s-height').textContent = height.toFixed(1) + ' м';
+        document.getElementById('s-time').textContent = time.toFixed(2) + ' с';
+    }
+
+    const line = d3.line().x(d => xScale(d.x)).y(d => yScale(d.y)).curve(d3.curveCatmullRom);
+
+    function updateTrajectory() {
+        const { pts, range, height, time } = computeTrajectory(getV0(), getAngle());
+        updateStats(range, height, time);
+
+        trajPath.datum(pts).attr('d', line);
+
+        trajPath.attr('stroke-dasharray', null).attr('stroke-dashoffset', null);
+        ball.attr('cx', xScale(pts[pts.length - 1].x)).attr('cy', yScale(pts[pts.length - 1].y));
+
+    }
+
+    updateTrajectory();
+
+    document.getElementById('v0').addEventListener('input', e => {
+        document.getElementById('v0-val').textContent = e.target.value;
+        updateTrajectory();
+    });
+    document.getElementById('angle').addEventListener('input', e => {
+        document.getElementById('angle-val').textContent = e.target.value;
+        updateTrajectory();
+    });
+    document.getElementById('btn-launch').addEventListener('click', () => updateTrajectory(true));
+</script>
