@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Задача Рюкзак — 5 методів</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap');
+
+        :root {
+            --bg: #0d0f14;
+            --surface: #13161e;
+            --surface2: #1a1e2a;
+            --border: #252a38;
+            --accent: #5b7cf6;
+            --accent2: #38d9a9;
+            --warn: #f4a94e;
+            --danger: #f06a6a;
+            --text: #e8eaf2;
+            --muted: #6b7494;
+            --mono: 'JetBrains Mono', monospace;
+            --sans: 'Syne', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 13px;
+            min-height: 100vh;
+        }
+
+        header {
+            border-bottom: 1px solid var(--border);
+            padding: 20px 32px;
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+        }
+
+        header h1 {
+            font-family: var(--sans);
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.5px;
+        }
+
+        header span {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 0;
+            height: calc(100vh - 65px);
+        }
+
+        .sidebar {
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            overflow-y: auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .main {
+            padding: 24px;
+            overflow-y: auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .field label {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        input[type=number], input[type=text] {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 13px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.15s;
+        }
+
+        input[type=number]:focus, input[type=text]:focus {
+            border-color: var(--accent);
+        }
+
+        .items-table-wrap {
+            overflow-x: auto;
+        }
+
+        table.items-input {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.items-input th {
+            text-align: left;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 4px 6px;
+            font-weight: 500;
+        }
+
+        table.items-input td {
+            padding: 3px 4px;
+        }
+
+        table.items-input td:first-child {
+            color: var(--muted);
+            font-size: 11px;
+            padding-left: 6px;
+            width: 30px;
+        }
+
+        table.items-input input {
+            width: 70px;
+            padding: 6px 8px;
+        }
+
+        .btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 12px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            font-weight: 700;
+        }
+        .btn-primary:hover { background: #4a6ae8; border-color: #4a6ae8; color: #fff; }
+
+        .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .methods-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .method-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: left;
+            line-height: 1.4;
+        }
+        .method-btn:hover { border-color: var(--accent); color: var(--text); }
+        .method-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(91,124,246,0.08); }
+        .method-btn .num { font-weight: 700; color: var(--accent); font-size: 13px; }
+
+        .run-all-btn {
+            background: var(--surface2);
+            border: 1px solid var(--accent2);
+            color: var(--accent2);
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 9px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.15s;
+        }
+        .run-all-btn:hover { background: rgba(56,217,169,0.1); }
+
+        /* RESULTS */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-family: var(--sans);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .tag {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            background: rgba(91,124,246,0.15);
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .card-body { padding: 16px; }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .stat-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+
+        .stat-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+        .stat-value { font-size: 18px; font-weight: 700; color: var(--text); }
+        .stat-value.green { color: var(--accent2); }
+        .stat-value.blue { color: var(--accent); }
+        .stat-value.yellow { color: var(--warn); }
+
+        .items-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .item-chip {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: var(--text);
+        }
+
+        .item-chip.selected {
+            border-color: var(--accent2);
+            color: var(--accent2);
+            background: rgba(56,217,169,0.08);
+        }
+
+        /* Comparison table */
+        table.compare {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.compare th {
+            text-align: left;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 500;
+        }
+
+        table.compare td {
+            padding: 9px 12px;
+            border-bottom: 1px solid rgba(37,42,56,0.5);
+            font-size: 12px;
+        }
+
+        table.compare tr:last-child td { border-bottom: none; }
+        table.compare tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .badge {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .badge-green { background: rgba(56,217,169,0.15); color: var(--accent2); }
+        .badge-blue  { background: rgba(91,124,246,0.15); color: var(--accent); }
+        .badge-yellow{ background: rgba(244,169,78,0.15); color: var(--warn); }
+        .badge-red   { background: rgba(240,106,106,0.15); color: var(--danger); }
+
+        .bar-wrap { display: flex; align-items: center; gap: 8px; }
+        .bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--accent);
+            min-width: 4px;
+            transition: width 0.4s ease;
+        }
+
+        .empty-state {
+            color: var(--muted);
+            font-size: 12px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .complexity-cell { font-size: 11px; color: var(--muted); }
+
+        .divider { height: 1px; background: var(--border); }
+
+        /* Test section */
+        .test-result {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .test-pass { background: rgba(56,217,169,0.1); border: 1px solid rgba(56,217,169,0.25); color: var(--accent2); }
+        .test-fail { background: rgba(240,106,106,0.1); border: 1px solid rgba(240,106,106,0.25); color: var(--danger); }
+        .test-icon { font-size: 14px; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎒 Задача Рюкзак</h1>
+    <span>Knapsack Problem — 5 методів · ЛР3.2</span>
+</header>
+
+<div class="layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+        <div>
+            <div class="section-label">Параметри рюкзака</div>
+            <div class="field-row">
+                <div class="field">
+                    <label>Кількість предметів (n)</label>
+                    <input type="number" id="nItems" value="5" min="1" max="20" oninput="rebuildTable()">
+                </div>
+                <div class="field">
+                    <label>Місткість W</label>
+                    <input type="number" id="capacity" value="10" min="1">
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-label">Предмети</div>
+            <div class="items-table-wrap">
+                <table class="items-input" id="itemsTable">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Вага w</th>
+                        <th>Цінність v</th>
+                    </tr>
+                    </thead>
+                    <tbody id="itemsBody"></tbody>
+                </table>
+            </div>
+            <div style="margin-top:10px;" class="btn-row">
+                <button class="btn btn-sm" onclick="loadExample()">Приклад</button>
+                <button class="btn btn-sm" onclick="randomFill()">Випадкові</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+            <div class="section-label">Оберіть метод</div>
+            <div class="methods-grid">
+                <button class="method-btn active" onclick="selectMethod(1,this)"><span class="num">1</span><br>Повний перебір</button>
+                <button class="method-btn" onclick="selectMethod(2,this)"><span class="num">2</span><br>Жадібний</button>
+                <button class="method-btn" onclick="selectMethod(3,this)"><span class="num">3</span><br>Гілки і межі</button>
+                <button class="method-btn" onclick="selectMethod(4,this)"><span class="num">4</span><br>ДП Bottom-Up</button>
+                <button class="method-btn" onclick="selectMethod(5,this)"><span class="num">5</span><br>ДП Top-Down</button>
+            </div>
+            <div style="margin-top:10px; display:flex; gap:8px;">
+                <button class="btn btn-primary" style="flex:1" onclick="runSelected()">▶ Запустити</button>
+                <button class="run-all-btn" style="flex:1" onclick="runAll()">≡ Усі методи</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div>
+            <div class="section-label">Тестування</div>
+            <button class="btn" style="width:100%" onclick="runTests()">🧪 Запустити тести</button>
+            <div id="testOutput" style="margin-top:10px;"></div>
+        </div>
+
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main" id="mainContent">
+        <div class="empty-state">
+            ← Введіть дані та натисніть «Запустити»
+        </div>
+    </div>
+</div>
+
+<script>
+    // ─────────────────────────────────────────────
+    // АЛГОРИТМИ
+    // ─────────────────────────────────────────────
+
+    /**
+     * Метод 1: Повний перебір (Brute Force)
+     * Складність: O(2^n * n)
+     */
+    function bruteForce(W, weights, values) {
+
+        const n = weights.length;
+
+        let bestValue = 0;
+        let bestMask = 0n;
+
+        for (let mask = 0n; mask < (1n << BigInt(n)); mask++) {
+
+            let tw = 0;
+            let tv = 0;
+
+            for (let i = 0; i < n; i++) {
+
+                if (mask & (1n << BigInt(i))) {
+                    tw += weights[i];
+                    tv += values[i];
+                }
+            }
+
+            if (tw <= W && tv > bestValue) {
+                bestValue = tv;
+                bestMask = mask;
+            }
+        }
+
+        const selected = [];
+
+        for (let i = 0; i < n; i++) {
+            if (bestMask & (1n << BigInt(i))) {
+                selected.push(i);
+            }
+        }
+
+        const totalWeight =
+            selected.reduce((s, i) => s + weights[i], 0);
+
+        return {
+            value: bestValue,
+            weight: totalWeight,
+            items: selected
+        };
+    }
+
+    /**
+     * Метод 2: Жадібний алгоритм (Greedy)
+     * Складність: O(n log n)
+     */
+    function greedy(W, weights, values) {
+        const n = weights.length;
+        const items = Array.from({length: n}, (_, i) => ({
+            idx: i, ratio: values[i] / weights[i], w: weights[i], v: values[i]
+        }));
+        items.sort((a, b) => b.ratio - a.ratio);
+        let capacity = W, totalValue = 0, totalWeight = 0;
+        const selected = [];
+        for (const item of items) {
+            if (item.w <= capacity) {
+                selected.push(item.idx);
+                capacity -= item.w;
+                totalValue += item.v;
+                totalWeight += item.w;
+            }
+        }
+        return { value: totalValue, weight: totalWeight, items: selected.sort((a,b)=>a-b) };
+    }
+
+    /**
+     * Метод 3: Гілки і межі (Branch and Bound)
+     * Складність: O(2^n) — з відсіканням
+     */
+    function branchAndBound(W, weights, values) {
+
+        const n = weights.length;
+
+        const items = Array.from({ length: n }, (_, i) => ({
+            origIdx: i,
+            w: weights[i],
+            v: values[i],
+            ratio: values[i] / weights[i]
+        }));
+
+        items.sort((a, b) => b.ratio - a.ratio);
+
+        function calcBound(level, curW, curV) {
+
+            if (curW >= W) return 0;
+
+            let value = curV;
+            let totalW = curW;
+            let j = level;
+
+            while (j < n && totalW + items[j].w <= W) {
+                totalW += items[j].w;
+                value += items[j].v;
+                j++;
+            }
+
+            if (j < n) {
+                value += (W - totalW) * items[j].ratio;
+            }
+
+            return value;
+        }
+
+        let bestValue = 0;
+        let bestItems = [];
+
+        function solve(level, curW, curV, selected) {
+
+            if (curW > W) return;
+
+            if (curV > bestValue) {
+                bestValue = curV;
+                bestItems = [...selected];
+            }
+
+            if (level >= n) return;
+
+            const ub = calcBound(level, curW, curV);
+
+            if (ub <= bestValue) return;
+
+            // Берем предмет
+            selected.push(items[level].origIdx);
+
+            solve(
+                level + 1,
+                curW + items[level].w,
+                curV + items[level].v,
+                selected
+            );
+
+            selected.pop();
+
+            // Не берем предмет
+            solve(level + 1, curW, curV, selected);
+        }
+
+        solve(0, 0, 0, []);
+
+        const totalWeight =
+            bestItems.reduce((s, i) => s + weights[i], 0);
+
+        return {
+            value: bestValue,
+            weight: totalWeight,
+            items: bestItems
+        };
+    }
+
+    /**
+     * Метод 4: Динамічне програмування Bottom-Up (2D таблиця)
+     * Складність: O(n * W)
+     */
+    function knapsackDP(W, weights, values) {
+        const n = weights.length;
+        const dp = Array.from({length: n+1}, () => new Array(W+1).fill(0));
+        for (let i = 1; i <= n; i++) {
+            for (let j = 0; j <= W; j++) {
+                dp[i][j] = dp[i-1][j];
+                if (weights[i-1] <= j) {
+                    const withItem = dp[i-1][j - weights[i-1]] + values[i-1];
+                    if (withItem > dp[i][j]) dp[i][j] = withItem;
+                }
+            }
+        }
+        // backtrace
+        const selected = [];
+        let j = W;
+        for (let i = n; i >= 1; i--) {
+            if (dp[i][j] !== dp[i-1][j]) { selected.push(i-1); j -= weights[i-1]; }
+        }
+        const totalWeight = selected.reduce((s, i) => s + weights[i], 0);
+        return { value: dp[n][W], weight: totalWeight, items: selected.sort((a,b)=>a-b) };
+    }
+
+    /**
+     * Метод 5: Динамічне програмування Top-Down (Мемоізація)
+     * Складність: O(n * W)
+     */
+    function knapsackMemo(W, weights, values) {
+        const n = weights.length;
+        const memo = Array.from({length: n+1}, () => new Array(W+1).fill(-1));
+
+        function solve(i, cap) {
+            if (i === 0 || cap === 0) return 0;
+            if (memo[i][cap] !== -1) return memo[i][cap];
+            let res = solve(i-1, cap);
+            if (weights[i-1] <= cap)
+                res = Math.max(res, solve(i-1, cap - weights[i-1]) + values[i-1]);
+            memo[i][cap] = res;
+            return res;
+        }
+
+        solve(n, W);
+
+        // Backtrace через таблицю memo
+        const selected = [];
+        let cap = W;
+        for (let i = n; i >= 1; i--) {
+            if (solve(i, cap) !== solve(i-1, cap)) {
+                selected.push(i-1);
+                cap -= weights[i-1];
+            }
+        }
+        const totalWeight = selected.reduce((s, i) => s + weights[i], 0);
+        return { value: memo[n][W], weight: totalWeight, items: selected.sort((a,b)=>a-b) };
+    }
+
+    // ─────────────────────────────────────────────
+    // ІНТЕРФЕЙС
+    // ─────────────────────────────────────────────
+
+    const METHODS = {
+        1: { name: 'Повний перебір', fn: bruteForce, complexity: 'O(2ⁿ·n)', space: 'O(1)', exact: true, color: '#f4a94e' },
+        2: { name: 'Жадібний',       fn: greedy,     complexity: 'O(n log n)', space: 'O(n)', exact: false, color: '#f06a6a' },
+        3: { name: 'Гілки і межі',   fn: branchAndBound, complexity: 'O(2ⁿ)*', space: 'O(n)', exact: true, color: '#b07cf6' },
+        4: { name: 'ДП Bottom-Up',   fn: knapsackDP, complexity: 'O(n·W)', space: 'O(n·W)', exact: true, color: '#5b7cf6' },
+        5: { name: 'ДП Top-Down',    fn: knapsackMemo, complexity: 'O(n·W)', space: 'O(n·W)', exact: true, color: '#38d9a9' },
+    };
+
+    let selectedMethod = 1;
+
+    function selectMethod(id, btn) {
+        selectedMethod = id;
+        document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    function rebuildTable() {
+        const n = parseInt(document.getElementById('nItems').value) || 1;
+        const tbody = document.getElementById('itemsBody');
+        const existing = tbody.querySelectorAll('tr');
+        const curN = existing.length;
+        if (n > curN) {
+            for (let i = curN; i < n; i++) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${i+1}</td>
+        <td><input type="number" class="w-input" value="1" min="1"></td>
+        <td><input type="number" class="v-input" value="1" min="1"></td>`;
+                tbody.appendChild(tr);
+            }
+        } else {
+            for (let i = curN; i > n; i--) tbody.removeChild(tbody.lastChild);
+        }
+    }
+
+    function getInputs() {
+        const W = parseInt(document.getElementById('capacity').value);
+        const wInputs = document.querySelectorAll('.w-input');
+        const vInputs = document.querySelectorAll('.v-input');
+        const weights = Array.from(wInputs).map(x => parseInt(x.value) || 1);
+        const values  = Array.from(vInputs).map(x => parseInt(x.value) || 1);
+        return { W, weights, values };
+    }
+
+    function loadExample() {
+        document.getElementById('nItems').value = 5;
+        document.getElementById('capacity').value = 10;
+        rebuildTable();
+        const ws = [2, 3, 4, 5, 1];
+        const vs = [3, 4, 5, 6, 2];
+        document.querySelectorAll('.w-input').forEach((el, i) => el.value = ws[i]);
+        document.querySelectorAll('.v-input').forEach((el, i) => el.value = vs[i]);
+    }
+
+    function randomFill() {
+        const n = parseInt(document.getElementById('nItems').value) || 5;
+        const W = Math.floor(Math.random() * 20) + 10;
+        document.getElementById('capacity').value = W;
+        rebuildTable();
+        document.querySelectorAll('.w-input').forEach(el => el.value = Math.floor(Math.random()*8)+1);
+        document.querySelectorAll('.v-input').forEach(el => el.value = Math.floor(Math.random()*10)+1);
+    }
+
+    function runMethod(id, W, weights, values) {
+        const m = METHODS[id];
+        const t0 = performance.now();
+        const result = m.fn(W, weights, values);
+        const time = (performance.now() - t0).toFixed(4);
+        return { ...result, time, methodId: id, method: m };
+    }
+
+    function renderResult(res, weights, values) {
+        const n = weights.length;
+        const { method, value, weight, items, time } = res;
+
+        const chipsHtml = Array.from({length: n}, (_, i) => {
+            const sel = items.includes(i);
+            return `<span class="item-chip ${sel ? 'selected' : ''}">
+      ${sel ? '✓ ' : ''}Предмет ${i+1} (w=${weights[i]}, v=${values[i]})
+    </span>`;
+        }).join('');
+
+        return `
+  <div class="card" style="border-top: 2px solid ${method.color}">
+    <div class="card-header">
+      <span class="card-title">Метод ${res.methodId} — ${method.name}</span>
+      <span class="tag">${method.complexity}</span>
+    </div>
+    <div class="card-body">
+      <div class="result-grid">
+        <div class="stat-box">
+          <div class="stat-label">Макс. цінність</div>
+          <div class="stat-value green">${value}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Сумарна вага</div>
+          <div class="stat-value blue">${weight}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Час (мс)</div>
+          <div class="stat-value yellow">${time}</div>
+        </div>
+      </div>
+      <div class="section-label">Відібрані предмети</div>
+      <div class="items-row">${chipsHtml}</div>
+      ${!method.exact ? '<div style="color:var(--warn);font-size:11px;margin-top:10px">⚠ Жадібний алгоритм не гарантує оптимального результату</div>' : ''}
+    </div>
+  </div>`;
+    }
+
+    function renderCompare(results, weights) {
+        const maxVal = Math.max(...results.map(r => r.value));
+        const maxTime = Math.max(...results.map(r => parseFloat(r.time))) || 0.001;
+
+        const rows = results.map(r => {
+            const m = r.method;
+            const isOpt = r.value === maxVal;
+            const barW = Math.max(4, Math.round((parseFloat(r.time) / maxTime) * 120));
+            return `<tr>
+      <td><span style="color:${m.color};font-weight:700">М${r.methodId}</span> ${m.name}</td>
+      <td><b style="color:var(--accent2)">${r.value}</b>${isOpt ? ' <span class="badge badge-green">opt</span>': ''}</td>
+      <td>${r.weight}</td>
+      <td><div class="bar-wrap"><div class="bar" style="width:${barW}px;background:${m.color}"></div><span>${r.time} мс</span></div></td>
+      <td class="complexity-cell">${m.complexity}</td>
+      <td>${m.exact ? '<span class="badge badge-blue">точний</span>' : '<span class="badge badge-yellow">набл.</span>'}</td>
+    </tr>`;
+        }).join('');
+
+        return `
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Порівняльна таблиця</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="compare">
+        <thead><tr>
+          <th>Метод</th><th>Цінність</th><th>Вага</th><th>Час</th><th>Складність</th><th>Точність</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+    }
+
+    function runSelected() {
+        const { W, weights, values } = getInputs();
+        const res = runMethod(selectedMethod, W, weights, values);
+        document.getElementById('mainContent').innerHTML =
+            renderResult(res, weights, values);
+    }
+
+    function runAll() {
+        const { W, weights, values } = getInputs();
+        const results = [];
+        for (let id = 1; id <= 5; id++) {
+            try { results.push(runMethod(id, W, weights, values)); }
+            catch(e) { console.error(id, e); }
+        }
+        document.getElementById('mainContent').innerHTML =
+            renderCompare(results, weights) +
+            results.map(r => renderResult(r, weights, values)).join('');
+    }
+
+    // ─────────────────────────────────────────────
+    // ТЕСТУВАННЯ
+    // ─────────────────────────────────────────────
+
+    const TEST_CASES = [
+        {
+            name: 'Базовий приклад',
+            W: 5, weights: [2,3,4,5], values: [3,4,5,6], expected: 7
+        },
+        {
+            name: 'Один предмет поміщається',
+            W: 10, weights: [5], values: [8], expected: 8
+        },
+        {
+            name: 'Жоден не поміщається',
+            W: 2, weights: [5, 6, 7], values: [10, 12, 14], expected: 0
+        },
+        {
+            name: 'Усі предмети поміщаються',
+            W: 20, weights: [1,2,3], values: [5,4,3], expected: 12
+        },
+        {
+            name: 'Класичний (оптим. = 13)',
+            W: 10, weights: [1,3,4,5], values: [1,4,5,7], expected: 13
+        },
+        {
+            // Жадібний бере лише предмет 0 (v/w=1.5), optimal = items 1+2 (w=10,v=12)
+            name: 'Жадібний неоптимальний (W=10)',
+            W: 10, weights: [6,5,5], values: [9,6,6], expected: 12
+        },
+    ];
+
+    function runTests() {
+        const out = document.getElementById('testOutput');
+        let html = '';
+        let pass = 0, fail = 0;
+
+        TEST_CASES.forEach(tc => {
+            // тестуємо точні методи 1,3,4,5
+            [1,3,4,5].forEach(id => {
+                const res = runMethod(id, tc.W, tc.weights, tc.values);
+                const ok = res.value === tc.expected;
+                if (ok) pass++; else fail++;
+                html += `<div class="test-result ${ok ? 'test-pass':'test-fail'}">
+        <span class="test-icon">${ok ? '✓' : '✗'}</span>
+        М${id} · ${tc.name}: ${res.value} ${ok ? '==' : '!='} ${tc.expected}
+      </div>`;
+            });
+            // метод 2 — не строго оптимальний, просто перевіряємо що ≥ 0
+            const r2 = runMethod(2, tc.W, tc.weights, tc.values);
+            const ok2 = r2.value >= 0 && r2.weight <= tc.W;
+            if (ok2) pass++; else fail++;
+            html += `<div class="test-result ${ok2 ? 'test-pass':'test-fail'}">
+      <span class="test-icon">${ok2 ? '✓' : '✗'}</span>
+      М2 · ${tc.name}: val=${r2.value}, w=${r2.weight}≤${tc.W} (допустиме рішення)
+    </div>`;
+        });
+
+        html = `<div style="font-size:12px;margin-bottom:10px;color:var(--text)">
+    <span style="color:var(--accent2)">✓ ${pass}</span> пройдено &nbsp;
+    <span style="color:var(--danger)">✗ ${fail}</span> провалено
+  </div>` + html;
+
+        out.innerHTML = html;
+    }
+
+    // Ініціалізація
+    rebuildTable();
+    loadExample();
+</script>
+</body>
+</html>

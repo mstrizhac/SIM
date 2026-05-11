@@ -81,7 +81,7 @@
         const pts = [];
         for (let i = 0; i <= 200; i++) {
             const t = (i / 200) * tTotal;
-            pts.push({ x: vx * t, y: vy * t - 0.5 * g * t * t });
+            pts.push({ x: vx * t, y: vy * t - 0.5 * g * t * t});
         }
         return { pts, range: vx * tTotal, height: (vy * vy) / (2 * g), time: tTotal };
     }
