@@ -161,7 +161,21 @@
         color: var(--color-text-danger)
     }
 
+    #animBar {
+        height: 2px;
+        background: var(--color-border-tertiary);
+        overflow: hidden;
+        border-radius: 2px;
+        margin-bottom: 12px;
+        display: none
+    }
 
+    #animFill {
+        height: 100%;
+        background: var(--color-text-info);
+        width: 0%;
+        transition: width .05s
+    }
 </style>
 
 <div style="padding:.5rem 0 1.5rem">
@@ -172,8 +186,13 @@
             (точна інтерполяція) &nbsp;·&nbsp; МНК (поліноміальна апроксимація)
         </p>
         <div style="display:flex;gap:6px">
+            <button id="animateBtn" class="t-btn">▶ Анімувати</button>
             <button id="resetBtn" class="t-btn">↺ Скинути</button>
         </div>
+    </div>
+
+    <div id="animBar">
+        <div id="animFill"></div>
     </div>
 
     <div id="tabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
@@ -421,7 +440,7 @@
         ctx.fillText(title, W / 2, 18);
     }
 
-    const state = {activeN: 'all', prog: 1, raf: null};
+    const state = {activeN: 'all', prog: 1, animating: false, raf: null};
 
     function buildCards() {
         const grid = document.getElementById('chartsGrid');
@@ -538,9 +557,43 @@
         applyFilter(state.activeN);
     });
 
+    document.getElementById('animateBtn').addEventListener('click', () => {
+        if (state.animating) {
+            cancelAnimationFrame(state.raf);
+            state.animating = false;
+            document.getElementById('animateBtn').textContent = '▶ Анімувати';
+            document.getElementById('animBar').style.display = 'none';
+            return;
+        }
+        state.animating = true;
+        state.prog = 0;
+        document.getElementById('animateBtn').textContent = '⏸ Зупинити';
+        document.getElementById('animBar').style.display = 'block';
+        const step = () => {
+            state.prog = Math.min(1, state.prog + .005);
+            document.getElementById('animFill').style.width = (state.prog * 100) + '%';
+            renderAll(state.prog);
+            if (state.prog < 1) state.raf = requestAnimationFrame(step);
+            else {
+                state.animating = false;
+                document.getElementById('animateBtn').textContent = '▶ Анімувати';
+                setTimeout(() => {
+                    document.getElementById('animBar').style.display = 'none';
+                }, 600);
+            }
+        };
+        state.raf = requestAnimationFrame(step);
+    });
+
     document.getElementById('resetBtn').addEventListener('click', () => {
+        if (state.animating) {
+            cancelAnimationFrame(state.raf);
+            state.animating = false;
+        }
         state.prog = 1;
         state.activeN = 'all';
+        document.getElementById('animateBtn').textContent = '▶ Анімувати';
+        document.getElementById('animBar').style.display = 'none';
         document.querySelectorAll('.t-btn').forEach(b => b.classList.toggle('active', b.dataset.n === 'all'));
         applyFilter('all');
         renderAll(1);
