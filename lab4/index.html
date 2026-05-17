@@ -10,7 +10,32 @@
 <h2 class="sr-only">Лабораторна робота №4: Порівняння методів Лагранжа та МНК для інтерполяції функції sin(x) з 5, 10 та
     20 точками</h2>
 <style>
-
+    :root {
+        --color-background-base: #050a14;
+        --color-background-primary: #0c1624;
+        --color-background-secondary: #16202e;
+        --color-background-info: rgba(0, 212, 255, 0.1);
+        --color-background-warning: rgba(0, 212, 255, 0.15);
+        --color-background-success: rgba(0, 255, 148, 0.15);
+        --color-border-primary: #1a2a3a;
+        --color-border-secondary: #243447;
+        --color-border-tertiary: #2d3e52;
+        --color-border-info: #00d4ff;
+        --color-accent-lagrange: #00d4ff;
+        --color-accent-lsm: #00ff94;
+        --color-accent-original: #2563eb;
+        --color-accent-data: #ff3c7e;
+        --color-text-primary: #e2e8f0;
+        --color-text-secondary: #94a3b8;
+        --color-text-tertiary: #64748b;
+        --color-text-info: #00d4ff;
+        --color-text-warning: #00d4ff;
+        --color-text-success: #00ff94;
+        --color-text-danger: #f87171;
+        --font-mono: "Courier New", monospace;
+        --border-radius-md: 4px;
+        --border-radius-lg: 8px;
+    }
 
     body {
         background-color: var(--color-background-base);
@@ -136,6 +161,7 @@
         color: var(--color-text-danger)
     }
 
+
 </style>
 
 <div style="padding:.5rem 0 1.5rem">
@@ -204,6 +230,7 @@
     const LABEL_C = '#94a3b8';
     const C_TRUE = '#2563eb';
     const C_LAG = '#00d4ff';
+    const C_LSM = '#00ff94';
     const C_PT = '#ff3c7e';
 
     const X0 = 0, X1 = 2 * Math.PI, RES = 320;
@@ -230,6 +257,43 @@
         }, 0);
     }
 
+    function gaussElim(A, b) {
+        const n = b.length;
+        const M = A.map((r, i) => [...r, b[i]]);
+        for (let c = 0; c < n; c++) {
+            let mr = c;
+            for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[mr][c])) mr = r;
+            [M[c], M[mr]] = [M[mr], M[c]];
+            const pv = M[c][c];
+            if (Math.abs(pv) < 1e-14) continue;
+            for (let r = c + 1; r < n; r++) {
+                const fac = M[r][c] / pv;
+                for (let k = c; k <= n; k++) M[r][k] -= fac * M[c][k];
+            }
+        }
+        const x = new Array(n).fill(0);
+        for (let i = n - 1; i >= 0; i--) {
+            if (Math.abs(M[i][i]) < 1e-14) continue;
+            x[i] = M[i][n];
+            for (let j = i + 1; j < n; j++) x[i] -= M[i][j] * x[j];
+            x[i] /= M[i][i];
+        }
+        return x;
+    }
+
+    function fitLSM(pts, deg) {
+        const m = deg + 1;
+        const xs = pts.map(p => p.x);
+        const mn = Math.min(...xs), mx = Math.max(...xs), rng = mx - mn || 1;
+        const sc = pts.map(p => ({x: (p.x - mn) / rng, y: p.y}));
+        const A = Array.from({length: m}, (_, i) => Array.from({length: m}, (_, j) => sc.reduce((s, p) => s + Math.pow(p.x, i + j), 0)));
+        const bv = Array.from({length: m}, (_, i) => sc.reduce((s, p) => s + p.y * Math.pow(p.x, i), 0));
+        const c = gaussElim(A, bv);
+        return x => {
+            const xs = (x - mn) / rng;
+            return c.reduce((s, ci, i) => s + ci * Math.pow(xs, i), 0);
+        };
+    }
 
     function buildCurve(fn) {
         return Array.from({length: RES + 1}, (_, i) => {
@@ -259,11 +323,14 @@
         const pts = genPts(n);
         const deg = LSM_DEG[n];
         const lFn = x => lagAt(pts, x);
+        const lsmFn = fitLSM(pts, deg);
         DATA[n] = {
             pts, deg,
             trueCurve: buildCurve(f),
             lagCurve: buildCurve(lFn),
+            lsmCurve: buildCurve(lsmFn),
             lagErr: errStats(lFn),
+            lsmErr: errStats(lsmFn)
         };
     });
 
@@ -360,7 +427,7 @@
         const grid = document.getElementById('chartsGrid');
         grid.innerHTML = '';
         [5, 10, 20].forEach(n => {
-            ['lag'].forEach(type => {
+            ['lag', 'lsm'].forEach(type => {
                 const d = DATA[n];
                 const err = type === 'lag' ? d.lagErr : d.lsmErr;
                 const cls = type === 'lag' ? 'b-lag' : 'b-lsm';
@@ -413,6 +480,19 @@
                     pts: d.pts, xDom, yDom, prog
                 });
             }
+
+            const lsmCv = document.getElementById(`cv-lsm-${n}`);
+            if (lsmCv) {
+                const yDom = getDom([d.trueCurve, d.lsmCurve, d.pts.map(p => ({y: p.y}))]);
+                drawChart(lsmCv, {
+                    title: `МНК — ${n} точок (ступінь ${d.deg})`,
+                    curves: [
+                        {data: d.trueCurve, color: C_TRUE, width: 1.8, dash: [4, 3]},
+                        {data: d.lsmCurve, color: C_LSM, width: 2.2}
+                    ],
+                    pts: d.pts, xDom, yDom, prog
+                });
+            }
         });
     }
 
@@ -438,7 +518,14 @@
       <td style="${border};text-align:right;font-family:var(--font-mono)" class="${ec(d.lagErr.rms)}">${d.lagErr.rms.toExponential(4)}</td>
       <td style="${border};text-align:center" class="${ec(d.lagErr.max)}">${gl(d.lagErr.max)}</td>
     </tr>
-  `);
+    <tr>
+      <td style="${border};font-family:var(--font-mono);font-weight:500">${n}</td>
+      <td style="${border}"><span class="m-badge b-lsm">МНК</span></td>
+      <td style="${border};color:var(--color-text-tertiary)">${d.deg}</td>
+      <td style="${border};text-align:right;font-family:var(--font-mono)" class="${ec(d.lsmErr.max)}">${d.lsmErr.max.toExponential(4)}</td>
+      <td style="${border};text-align:right;font-family:var(--font-mono)" class="${ec(d.lsmErr.rms)}">${d.lsmErr.rms.toExponential(4)}</td>
+      <td style="${border};text-align:center" class="${ec(d.lsmErr.max)}">${gl(d.lsmErr.max)}</td>
+    </tr>`);
         });
         tbody.innerHTML = rows.join('');
     }
