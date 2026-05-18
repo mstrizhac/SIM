@@ -186,6 +186,10 @@
             (точна інтерполяція) &nbsp;·&nbsp; МНК (поліноміальна апроксимація)
         </p>
         <div style="display:flex;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px;margin-right:12px;background:var(--color-background-secondary);padding:4px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary)">
+                <label for="noiseRange" style="font-size:11px;color:var(--color-text-tertiary);white-space:nowrap">Шум: <span id="noiseVal" style="color:var(--color-text-info);font-family:var(--font-mono);width:30px;display:inline-block">0%</span></label>
+                <input type="range" id="noiseRange" min="0" max="15" value="0" style="width:80px;cursor:pointer">
+            </div>
             <button id="animateBtn" class="t-btn">▶ Анімувати</button>
             <button id="resetBtn" class="t-btn">↺ Скинути</button>
         </div>
@@ -252,20 +256,32 @@
     const C_LSM = '#00ff94';
     const C_PT = '#ff3c7e';
 
+    // === Виток 1: Базовий прототип ===
+    // Визначення цільової функції та базових параметрів
     const X0 = 0, X1 = 2 * Math.PI, RES = 320;
     const LSM_DEG = {5: 3, 10: 4, 20: 5};
 
+    /**
+     * Цільова функція f(x) = sin(x)
+     */
     function f(x) {
         return Math.sin(x);
     }
 
-    function genPts(n) {
+    /**
+     * Генерація вузлів інтерполяції з можливістю додавання шуму
+     */
+    function genPts(n, noise = 0) {
         return Array.from({length: n}, (_, i) => {
             const x = X0 + (i / (n - 1)) * (X1 - X0);
-            return {x, y: f(x)};
+            const noiseVal = (Math.random() * 3) * (noise / 400);
+            return {x, y: f(x) + noiseVal};
         });
     }
 
+    /**
+     * Обчислення значення полінома Лагранжа в точці x
+     */
     function lagAt(pts, x) {
         return pts.reduce((s, pi, i) => {
             let L = 1;
@@ -276,6 +292,11 @@
         }, 0);
     }
 
+    // === Виток 2: МНК та матричні обчислення ===
+    /**
+     * Метод Гаусса для розв'язання СЛАР (Ax = b)
+     * Використовується для знаходження коефіцієнтів МНК
+     */
     function gaussElim(A, b) {
         const n = b.length;
         const M = A.map((r, i) => [...r, b[i]]);
@@ -300,6 +321,10 @@
         return x;
     }
 
+    /**
+     * Апроксимація методом найменших квадратів (МНК)
+     * Побудова нормальної системи рівнянь та її розв'язання
+     */
     function fitLSM(pts, deg) {
         const m = deg + 1;
         const xs = pts.map(p => p.x);
@@ -314,6 +339,9 @@
         };
     }
 
+    /**
+     * Побудова масиву точок кривої для візуалізації
+     */
     function buildCurve(fn) {
         return Array.from({length: RES + 1}, (_, i) => {
             const x = X0 + (i / RES) * (X1 - X0);
@@ -322,6 +350,9 @@
         });
     }
 
+    /**
+     * Розрахунок метрик похибки (Max та RMS)
+     */
     function errStats(fn) {
         const pts = Array.from({length: 500}, (_, i) => {
             const x = X0 + (i / 499) * (X1 - X0);
@@ -353,6 +384,10 @@
         };
     });
 
+    // === Виток 3: UI, анімація, інтерактивність ===
+    /**
+     * Рендеринг графіка на Canvas
+     */
     function drawChart(canvas, {title, curves, pts, xDom, yDom, prog = 1}) {
         const ctx = canvas.getContext('2d');
         const W = canvas.width, H = canvas.height;
@@ -440,8 +475,28 @@
         ctx.fillText(title, W / 2, 18);
     }
 
-    const state = {activeN: 'all', prog: 1, animating: false, raf: null};
+    const state = {activeN: 'all', prog: 1, animating: false, raf: null, noise: 0};
 
+    function recalculateData() {
+        [5, 10, 20].forEach(n => {
+            const pts = genPts(n, state.noise);
+            const deg = LSM_DEG[n];
+            const lFn = x => lagAt(pts, x);
+            const lsmFn = fitLSM(pts, deg);
+            DATA[n] = {
+                pts, deg,
+                trueCurve: buildCurve(f),
+                lagCurve: buildCurve(lFn),
+                lsmCurve: buildCurve(lsmFn),
+                lagErr: errStats(lFn),
+                lsmErr: errStats(lsmFn)
+            };
+        });
+    }
+
+    /**
+     * Генерація HTML-карток для кожного графіка
+     */
     function buildCards() {
         const grid = document.getElementById('chartsGrid');
         grid.innerHTML = '';
@@ -557,6 +612,9 @@
         applyFilter(state.activeN);
     });
 
+    /**
+     * Запуск анімації малювання кривих
+     */
     document.getElementById('animateBtn').addEventListener('click', () => {
         if (state.animating) {
             cancelAnimationFrame(state.raf);
@@ -592,11 +650,27 @@
         }
         state.prog = 1;
         state.activeN = 'all';
+        state.noise = 0;
+        document.getElementById('noiseRange').value = 0;
+        document.getElementById('noiseVal').textContent = '0%';
         document.getElementById('animateBtn').textContent = '▶ Анімувати';
         document.getElementById('animBar').style.display = 'none';
         document.querySelectorAll('.t-btn').forEach(b => b.classList.toggle('active', b.dataset.n === 'all'));
+        recalculateData();
+        buildCards();
+        buildErrTable();
         applyFilter('all');
         renderAll(1);
+    });
+
+    document.getElementById('noiseRange').addEventListener('input', e => {
+        state.noise = parseInt(e.target.value);
+        document.getElementById('noiseVal').textContent = state.noise + '%';
+        recalculateData();
+        buildCards();
+        buildErrTable();
+        applyFilter(state.activeN);
+        renderAll(state.prog);
     });
 
     buildCards();
